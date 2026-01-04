@@ -67,10 +67,10 @@ export default function CheckInClient({
       } else {
         setStatus('success')
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Check-in error:', err)
       setStatus('error')
-      setErrorMessage(err.message || 'Failed to check in. Please try again.')
+      setErrorMessage(err instanceof Error ? err.message : String(err) || 'Failed to check in. Please try again.')
     }
   }
 

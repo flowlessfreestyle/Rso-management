@@ -2,13 +2,14 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import CheckInClient from './checkin-client'
 
-export default async function CheckInPage({ params }: { params: { eventId: string } }) {
+export default async function CheckInPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = await params
   const supabase = await createServerSupabaseClient()
   
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
-    redirect(`/login?redirect=/checkin/${params.eventId}`)
+    redirect(`/login?redirect=/checkin/${eventId}`)
   }
 
   const { data: profile } = await supabase
@@ -29,14 +30,14 @@ export default async function CheckInPage({ params }: { params: { eventId: strin
       *,
       profiles!events_organization_id_fkey(organization_name)
     `)
-    .eq('id', params.eventId)
+    .eq('id', eventId)
     .single()
 
   if (!event) {
     return <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-red-600">Event Not Found</h1>
-        <p className="text-gray-600 mt-2">This event doesn't exist.</p>
+        <p className="text-gray-600 mt-2">This event doesn&apos;t exist.</p>
       </div>
     </div>
   }
@@ -45,7 +46,7 @@ export default async function CheckInPage({ params }: { params: { eventId: strin
   const { data: rsvp } = await supabase
     .from('rsvps')
     .select('*')
-    .eq('event_id', params.eventId)
+    .eq('event_id', eventId)
     .eq('student_id', user.id)
     .single()
 
@@ -53,7 +54,7 @@ export default async function CheckInPage({ params }: { params: { eventId: strin
   const { data: existingCheckIn } = await supabase
     .from('check_ins')
     .select('*')
-    .eq('event_id', params.eventId)
+            .eq('event_id', eventId)
     .eq('student_id', user.id)
     .single()
 

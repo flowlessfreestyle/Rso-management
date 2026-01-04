@@ -30,9 +30,14 @@ export default function QRCheckInClient({
   const supabase = createClient()
 
   // Generate check-in URL
-  const checkInUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/checkin/${event.id}`
-    : ''
+  const [checkInUrl, setCheckInUrl] = useState('')
+
+  useEffect(() => {
+    const url = `${window.location.origin}/checkin/${event.id}`
+    setTimeout(() => {
+      setCheckInUrl(url)
+    }, 0)
+  }, [event.id])
 
   useEffect(() => {
     // Subscribe to new check-ins
@@ -102,12 +107,18 @@ export default function QRCheckInClient({
 
             {/* QR Code */}
             <div className="flex justify-center p-8 bg-white border-4 border-purple-600 rounded-lg">
-              <QRCodeSVG 
+            {checkInUrl ? (
+                <QRCodeSVG 
                 value={checkInUrl}
                 size={300}
                 level="H"
                 includeMargin={true}
-              />
+                />
+            ) : (
+                <div className="w-[300px] h-[300px] flex items-center justify-center">
+                <div className="text-gray-400">Loading...</div>
+                </div>
+            )}
             </div>
 
             <p className="text-center text-sm text-gray-500 mt-4">
