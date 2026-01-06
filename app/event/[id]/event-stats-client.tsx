@@ -219,7 +219,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
-                <YAxis />
+                <YAxis dataKey="capacity" />
                 <Tooltip />
                 <Line type="monotone" dataKey="rsvps" stroke="#9333ea" strokeWidth={2} />
               </LineChart>
