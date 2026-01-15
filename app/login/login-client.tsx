@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 
@@ -8,8 +8,6 @@ export default function LoginClient() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
-  const [userType, setUserType] = useState<'student' | 'organization'>('student')
-  const [organizationName, setOrganizationName] = useState('')
   const [major, setMajor] = useState('')
   const [year, setYear] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
@@ -44,16 +42,15 @@ export default function LoginClient() {
               id: authData.user.id,
               email,
               name,
-              user_type: userType,
-              organization_name: userType === 'organization' ? organizationName : null,
-              major: userType === 'student' ? major || null : null,
-              year: userType === 'student' ? year || null : null,
+              user_type: 'student',
+              major: major || null,
+              year: year || null,
             })
 
           if (profileError) throw profileError
 
           // If signing up for check-in, auto-check-in and redirect
-          if (eventId && userType === 'student') {
+          if (eventId) {
             // Small delay to ensure profile is fully created
             await new Promise(resolve => setTimeout(resolve, 500))
             
@@ -76,12 +73,8 @@ export default function LoginClient() {
             return
           }
 
-          // Redirect based on user type
-          if (userType === 'student') {
-            router.push('/events')
-          } else {
-            router.push('/dashboard')
-          }
+          // Redirect to events page
+          router.push('/events')
         }
       } else {
         // Sign in
@@ -181,81 +174,34 @@ export default function LoginClient() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Account Type
+                  Major
                 </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="student"
-                      checked={userType === 'student'}
-                      onChange={(e) => setUserType(e.target.value as 'student')}
-                      className="mr-2"
-                    />
-                    Student
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="organization"
-                      checked={userType === 'organization'}
-                      onChange={(e) => setUserType(e.target.value as 'organization')}
-                      className="mr-2"
-                    />
-                    Organization
-                  </label>
-                </div>
+                <input
+                  type="text"
+                  value={major}
+                  onChange={(e) => setMajor(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
+                  placeholder="e.g., Computer Science"
+                />
               </div>
 
-              {userType === 'organization' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Organization Name
-                  </label>
-                  <input
-                    type="text"
-                    value={organizationName}
-                    onChange={(e) => setOrganizationName(e.target.value)}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
-                  />
-                </div>
-              )}
-
-              {userType === 'student' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Major
-                    </label>
-                    <input
-                      type="text"
-                      value={major}
-                      onChange={(e) => setMajor(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
-                      placeholder="e.g., Computer Science"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Year
-                    </label>
-                    <select
-                      value={year}
-                      onChange={(e) => setYear(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
-                    >
-                      <option value="">Select Year</option>
-                      <option value="Freshman">Freshman</option>
-                      <option value="Sophomore">Sophomore</option>
-                      <option value="Junior">Junior</option>
-                      <option value="Senior">Senior</option>
-                      <option value="Graduate">Graduate</option>
-                    </select>
-                  </div>
-                </>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Year
+                </label>
+                <select
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
+                >
+                  <option value="">Select Year</option>
+                  <option value="Freshman">Freshman</option>
+                  <option value="Sophomore">Sophomore</option>
+                  <option value="Junior">Junior</option>
+                  <option value="Senior">Senior</option>
+                  <option value="Graduate">Graduate</option>
+                </select>
+              </div>
             </>
           )}
 
