@@ -15,6 +15,7 @@ interface Event {
   capacity: number
 }
 
+
 export default function QRCheckInClient({ 
   event, 
   rsvpCount,
@@ -25,7 +26,7 @@ export default function QRCheckInClient({
   checkInCount: number
 }) {
   const [checkInCount, setCheckInCount] = useState(initialCheckInCount)
-  const [recentCheckIns, setRecentCheckIns] = useState<Array<{ name: string; time: Date }>>([])
+  const [recentCheckIns, setRecentCheckIns] = useState<Array<{ id: string; name: string; time: Date }>>([])
   const router = useRouter()
   const supabase = createClient()
 
@@ -40,6 +41,43 @@ export default function QRCheckInClient({
   }, [event.id])
 
   useEffect(() => {
+    // Fetch initial recent check-ins
+    const fetchRecentCheckIns = async () => {
+      const { data: checkIns, error } = await supabase
+        .from('check_ins')
+        .select('id, student_id, check_in_time')
+        .eq('event_id', event.id)
+        .order('check_in_time', { ascending: false })
+        .limit(10)
+
+      if (error) {
+        return
+      }
+
+      if (checkIns && checkIns.length > 0) {
+        // Fetch profile names separately
+        const studentIds = checkIns.map(ci => ci.student_id)
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', studentIds)
+
+        const profileMap = new Map(profiles?.map(p => [p.id, p.name]) || [])
+
+        const formattedCheckIns = checkIns.map((ci) => ({
+          id: ci.id,
+          name: profileMap.get(ci.student_id) || 'Unknown Student',
+          time: new Date(ci.check_in_time)
+        }))
+
+        setRecentCheckIns(formattedCheckIns)
+      } else {
+        setRecentCheckIns([])
+      }
+    }
+
+    fetchRecentCheckIns()
+
     // Subscribe to new check-ins
     const channel = supabase
       .channel(`check-ins-${event.id}`)
@@ -62,10 +100,13 @@ export default function QRCheckInClient({
             .single()
 
           if (profile) {
-            setRecentCheckIns(prev => [
-              { name: profile.name, time: new Date() },
-              ...prev.slice(0, 9) // Keep last 10
-            ])
+            const newCheckIn = {
+              id: payload.new.id,
+              name: profile.name || 'Unknown Student',
+              time: new Date(payload.new.check_in_time)
+            }
+            
+            setRecentCheckIns(prev => [newCheckIn, ...prev.slice(0, 9)])
           }
         }
       )
@@ -97,7 +138,7 @@ export default function QRCheckInClient({
             <p className="text-gray-600 mb-6">Students scan this QR code to check in</p>
 
             {/* Event Info */}
-            <div className="bg-purple-50 rounded-lg p-4 mb-6">
+            <div className="bg-sky-50 rounded-lg p-4 mb-6">
               <h3 className="font-bold text-lg text-gray-900 mb-2">{event.title}</h3>
               <p className="text-sm text-gray-600">
                 {format(new Date(event.event_date), 'EEEE, MMMM d, yyyy • h:mm a')}
@@ -106,7 +147,7 @@ export default function QRCheckInClient({
             </div>
 
             {/* QR Code */}
-            <div className="flex justify-center p-8 bg-white border-4 border-purple-600 rounded-lg">
+            <div className="flex justify-center p-8 bg-white border-4 border-sky-600 rounded-lg">
             {checkInUrl ? (
                 <QRCodeSVG 
                 value={checkInUrl}
@@ -178,9 +219,9 @@ export default function QRCheckInClient({
                 </p>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {recentCheckIns.map((checkIn, index) => (
+                  {recentCheckIns.map((checkIn) => (
                     <div
-                      key={index}
+                      key={checkIn.id}
                       className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200 animate-fade-in"
                     >
                       <div className="flex items-center">

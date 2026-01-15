@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Calendar, MapPin, LogOut, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useState } from 'react'
+import Logo from '@/app/components/Logo'
 
 interface Rsvp {
   id: string
@@ -17,7 +18,6 @@ interface Rsvp {
     description: string
     event_date: string
     location: string
-    profiles: { organization_name: string }
   }
 }
 
@@ -27,7 +27,21 @@ export default function MyRsvpsClient({ rsvps, userId }: { rsvps: Rsvp[], userId
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  const handleCancelRsvp = async (eventId: string) => {
+  // Filter out past events
+  const now = new Date()
+  const upcomingRsvps = rsvps.filter(rsvp => new Date(rsvp.events.event_date) >= now)
+
+  const handleCancelRsvp = async (eventId: string, eventDate: string) => {
+    // Check if event is more than 24 hours past
+    const eventDateTime = new Date(eventDate)
+    const now = new Date()
+    const hoursSinceEvent = (now.getTime() - eventDateTime.getTime()) / (1000 * 60 * 60)
+    
+    if (hoursSinceEvent > 24) {
+      setError('Cannot cancel RSVP for events that occurred more than 24 hours ago.')
+      return
+    }
+
     setLoading(eventId)
     setError('')
     
@@ -60,11 +74,10 @@ export default function MyRsvpsClient({ rsvps, userId }: { rsvps: Rsvp[], userId
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
-              <Link href="/events" className="text-2xl font-bold text-purple-600 hover:text-purple-700">
-                RSO Events
-              </Link>
+              <Logo href="/events" />
               <Link href="/events" className="text-gray-600 hover:text-gray-900">Events</Link>
               <Link href="/my-rsvps" className="text-gray-900 font-medium">My RSVPs</Link>
+              <Link href="/profiles/student-profile" className="text-gray-600 hover:text-gray-900">Profile</Link>
             </div>
             <button
               onClick={handleLogout}
@@ -87,19 +100,19 @@ export default function MyRsvpsClient({ rsvps, userId }: { rsvps: Rsvp[], userId
           </div>
         )}
         
-        {rsvps.length === 0 ? (
+        {upcomingRsvps.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-gray-500 text-lg mb-4">You haven&apos;t RSVP&apos;d to any events yet.</p>
+            <p className="text-gray-500 text-lg mb-4">You haven&apos;t RSVP&apos;d to any upcoming events yet.</p>
             <Link
               href="/events"
-              className="inline-block bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition"
+              className="inline-block bg-sky-600 text-white px-6 py-2 rounded-lg hover:bg-sky-700 transition"
             >
               Browse Events
             </Link>
           </div>
         ) : (
           <div className="space-y-4">
-            {rsvps.map((rsvp) => (
+            {upcomingRsvps.map((rsvp) => (
               <div
                 key={rsvp.id}
                 className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
@@ -109,9 +122,6 @@ export default function MyRsvpsClient({ rsvps, userId }: { rsvps: Rsvp[], userId
                     <h3 className="text-xl font-bold text-gray-900 mb-1">
                       {rsvp.events.title}
                     </h3>
-                    <p className="text-sm text-purple-600 font-medium mb-3">
-                      {rsvp.events.profiles.organization_name}
-                    </p>
                     
                     <div className="space-y-2 mb-3">
                       <div className="flex items-center text-gray-600 text-sm">
@@ -129,14 +139,32 @@ export default function MyRsvpsClient({ rsvps, userId }: { rsvps: Rsvp[], userId
                     )}
                   </div>
 
-                  <button
-                    onClick={() => handleCancelRsvp(rsvp.event_id)}
-                    disabled={loading === rsvp.event_id}
-                    className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
-                    title="Cancel RSVP"
-                  >
-                    <Trash2 size={20} />
-                  </button>
+                  {(() => {
+                    const eventDateTime = new Date(rsvp.events.event_date)
+                    const now = new Date()
+                    const hoursSinceEvent = (now.getTime() - eventDateTime.getTime()) / (1000 * 60 * 60)
+                    const isPast24Hours = hoursSinceEvent > 24
+                    const isPast = eventDateTime < now
+
+                    if (isPast24Hours) {
+                      return (
+                        <div className="ml-4 px-3 py-2 text-sm text-gray-500 bg-gray-100 rounded-lg">
+                          Event Completed
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <button
+                        onClick={() => handleCancelRsvp(rsvp.event_id, rsvp.events.event_date)}
+                        disabled={loading === rsvp.event_id || isPast}
+                        className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                        title={isPast ? "Event has passed" : "Cancel RSVP"}
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    )
+                  })()}
                 </div>
               </div>
             ))}

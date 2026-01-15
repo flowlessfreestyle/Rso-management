@@ -16,10 +16,7 @@ export default async function MyRsvpsPage() {
     .from('rsvps')
     .select(`
       *,
-      events(
-        *,
-        profiles!events_organization_id_fkey(organization_name)
-      )
+      events(*)
     `)
     .eq('student_id', user.id)
     .order('rsvp_date', { ascending: false })

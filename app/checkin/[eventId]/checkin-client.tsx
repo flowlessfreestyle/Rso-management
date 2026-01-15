@@ -13,20 +13,15 @@ interface Event {
   event_date: string
   location: string
   capacity: number
-  profiles: {
-    organization_name: string
-  }
 }
 
 export default function CheckInClient({
   event,
   userId,
-  hasRsvp,
   alreadyCheckedIn
 }: {
   event: Event
   userId: string
-  hasRsvp: boolean
   alreadyCheckedIn: boolean
 }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>(
@@ -37,12 +32,6 @@ export default function CheckInClient({
   const supabase = createClient()
 
   const handleCheckIn = async () => {
-    if (!hasRsvp) {
-      setStatus('error')
-      setErrorMessage("You haven't RSVP'd to this event. Please RSVP first!")
-      return
-    }
-
     if (alreadyCheckedIn) {
       setStatus('success')
       return
@@ -75,14 +64,16 @@ export default function CheckInClient({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center p-4">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: 'linear-gradient(to bottom right, rgb(14 165 233), rgb(59 130 246))' }}
+    >
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg">
         {/* Event Info */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{event.title}</h1>
-          <p className="text-purple-600 font-medium mb-4">{event.profiles.organization_name}</p>
           
-          <div className="space-y-2 text-gray-600 text-sm">
+          <div className="space-y-2 text-gray-600 text-sm mt-4">
             <div className="flex items-center justify-center">
               <Calendar size={16} className="mr-2" />
               {format(new Date(event.event_date), 'EEEE, MMMM d, yyyy • h:mm a')}
@@ -101,37 +92,21 @@ export default function CheckInClient({
           <div className="text-center">
             <AlertCircle className="mx-auto text-blue-500 mb-4" size={64} />
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Ready to Check In?</h2>
-            {hasRsvp ? (
-              <>
-                <p className="text-gray-600 mb-6">
-                  Click the button below to confirm your attendance at this event.
-                </p>
-                <button
-                  onClick={handleCheckIn}
-                  className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
-                >
-                  Check In Now
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-gray-600 mb-6">
-                  You need to RSVP before you can check in to this event.
-                </p>
-                <button
-                  onClick={() => router.push('/events')}
-                  className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
-                >
-                  Go to Events & RSVP
-                </button>
-              </>
-            )}
+            <p className="text-gray-600 mb-6">
+              Click the button below to confirm your attendance at this event.
+            </p>
+            <button
+              onClick={handleCheckIn}
+              className="w-full bg-sky-600 text-white py-3 rounded-lg font-semibold hover:bg-sky-700 transition"
+            >
+              Check In Now
+            </button>
           </div>
         )}
 
         {status === 'loading' && (
           <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-sky-600 mx-auto mb-4"></div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Checking you in...</h2>
             <p className="text-gray-600">Please wait a moment</p>
           </div>
@@ -145,8 +120,8 @@ export default function CheckInClient({
             </h2>
             <p className="text-gray-600 mb-6">
               {alreadyCheckedIn 
-                ? "You've already checked in to this event. Enjoy!"
-                : "You're all set! Enjoy the event."}
+                ? "You&apos;ve already checked in to this event. Enjoy!"
+                : "You&apos;re all set! Enjoy the event."}
             </p>
             <button
               onClick={() => router.push('/events')}
@@ -162,22 +137,12 @@ export default function CheckInClient({
             <XCircle className="mx-auto text-red-500 mb-4" size={64} />
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Check-In Failed</h2>
             <p className="text-gray-600 mb-6">{errorMessage}</p>
-            <div className="space-y-3">
-              {!hasRsvp && (
-                <button
-                  onClick={() => router.push('/events')}
-                  className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
-                >
-                  Go to Events & RSVP
-                </button>
-              )}
-              <button
-                onClick={() => setStatus('idle')}
-                className="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition"
-              >
-                Try Again
-              </button>
-            </div>
+            <button
+              onClick={() => setStatus('idle')}
+              className="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition"
+            >
+              Try Again
+            </button>
           </div>
         )}
       </div>

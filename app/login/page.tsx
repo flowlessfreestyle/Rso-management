@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -10,11 +10,16 @@ export default function LoginPage() {
   const [name, setName] = useState('')
   const [userType, setUserType] = useState<'student' | 'organization'>('student')
   const [organizationName, setOrganizationName] = useState('')
+  const [major, setMajor] = useState('')
+  const [year, setYear] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+  
+  const eventId = searchParams?.get('eventId')
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,9 +46,35 @@ export default function LoginPage() {
               name,
               user_type: userType,
               organization_name: userType === 'organization' ? organizationName : null,
+              major: userType === 'student' ? major || null : null,
+              year: userType === 'student' ? year || null : null,
             })
 
           if (profileError) throw profileError
+
+          // If signing up for check-in, auto-check-in and redirect
+          if (eventId && userType === 'student') {
+            // Small delay to ensure profile is fully created
+            await new Promise(resolve => setTimeout(resolve, 500))
+            
+            try {
+              const { error: checkInError } = await supabase
+                .from('check_ins')
+                .insert({
+                  event_id: eventId,
+                  student_id: authData.user.id
+                })
+
+              if (checkInError && checkInError.code !== '23505') {
+                console.error('Check-in error:', checkInError)
+              }
+            } catch (err) {
+              console.error('Error during auto check-in:', err)
+            }
+
+            router.push(`/checkin/${eventId}`)
+            return
+          }
 
           // Redirect based on user type
           if (userType === 'student') {
@@ -62,6 +93,36 @@ export default function LoginPage() {
         if (authError) throw authError
 
         if (authData.user) {
+          // If logging in for check-in, auto-check-in and redirect
+          if (eventId) {
+            // Check if already checked in
+            const { data: existingCheckIn } = await supabase
+              .from('check_ins')
+              .select('*')
+              .eq('event_id', eventId)
+              .eq('student_id', authData.user.id)
+              .single()
+
+            if (!existingCheckIn) {
+              // Perform check-in
+              const { error: checkInError } = await supabase
+                .from('check_ins')
+                .insert({
+                  event_id: eventId,
+                  student_id: authData.user.id
+                })
+
+              if (checkInError && checkInError.code !== '23505') {
+                // If not a duplicate error, log it but continue
+                console.error('Check-in error:', checkInError)
+              }
+            }
+
+            // Redirect to check-in page (will show success)
+            router.push(`/checkin/${eventId}`)
+            return
+          }
+
           // Get user profile to determine redirect
           const { data: profile } = await supabase
             .from('profiles')
@@ -86,11 +147,11 @@ export default function LoginPage() {
   return (
     <div 
       className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'linear-gradient(to bottom right, rgb(147 51 234), rgb(59 130 246))' }}
+      style={{ background: 'linear-gradient(to bottom right, rgb(14 165 233), rgb(59 130 246))' }}
     >
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
-          RSO Events Platform
+          SSA Events Platform
         </h1>
         <h2 className="text-xl font-semibold text-center mb-6 text-gray-600">
           {isSignUp ? 'Create Account' : 'Sign In'}
@@ -114,7 +175,7 @@ export default function LoginPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
                 />
               </div>
 
@@ -156,9 +217,44 @@ export default function LoginPage() {
                     value={organizationName}
                     onChange={(e) => setOrganizationName(e.target.value)}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
                   />
                 </div>
+              )}
+
+              {userType === 'student' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Major
+                    </label>
+                    <input
+                      type="text"
+                      value={major}
+                      onChange={(e) => setMajor(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
+                      placeholder="e.g., Computer Science"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Year
+                    </label>
+                    <select
+                      value={year}
+                      onChange={(e) => setYear(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
+                    >
+                      <option value="">Select Year</option>
+                      <option value="Freshman">Freshman</option>
+                      <option value="Sophomore">Sophomore</option>
+                      <option value="Junior">Junior</option>
+                      <option value="Senior">Senior</option>
+                      <option value="Graduate">Graduate</option>
+                    </select>
+                  </div>
+                </>
               )}
             </>
           )}
@@ -172,7 +268,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
             />
           </div>
 
@@ -186,14 +282,14 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-purple-600 text-white py-2 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50"
+            className="w-full bg-sky-600 text-white py-2 rounded-lg font-semibold hover:bg-sky-700 transition disabled:opacity-50"
           >
             {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
           </button>
@@ -206,7 +302,7 @@ export default function LoginPage() {
               setIsSignUp(!isSignUp)
               setError('')
             }}
-            className="text-purple-600 font-semibold hover:underline"
+            className="text-sky-600 font-semibold hover:underline"
           >
             {isSignUp ? 'Sign In' : 'Sign Up'}
           </button>

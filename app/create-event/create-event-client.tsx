@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LogOut, Calendar } from 'lucide-react'
+import Logo from '@/app/components/Logo'
 
 export default function CreateEventClient({ organizationId }: { organizationId: string }) {
   const [title, setTitle] = useState('')
@@ -30,7 +31,6 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
       const { error: insertError } = await supabase
         .from('events')
         .insert({
-          organization_id: organizationId,
           title,
           description,
           event_date: dateTime,
@@ -61,9 +61,7 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
-              <Link href="/dashboard" className="text-2xl font-bold text-purple-600 hover:text-purple-700">
-                RSO Events
-              </Link>
+              <Logo href="/dashboard" />
               <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
               <Link href="/create-event" className="text-gray-900 font-medium">Create Event</Link>
             </div>
@@ -82,7 +80,7 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-md p-8">
           <div className="flex items-center mb-6">
-            <Calendar className="text-purple-600 mr-3" size={32} />
+            <Calendar className="text-sky-600 mr-3" size={32} />
             <h2 className="text-3xl font-bold text-gray-900">Create New Event</h2>
           </div>
 
@@ -102,7 +100,7 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900"
                 placeholder="e.g., Fall Kickoff Meeting"
               />
             </div>
@@ -115,7 +113,7 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900"
                 placeholder="Tell students what this event is about..."
               />
             </div>
@@ -130,7 +128,7 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
                   value={eventDate}
                   onChange={(e) => setEventDate(e.target.value)}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900"
                 />
               </div>
 
@@ -143,7 +141,7 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
                   value={eventTime}
                   onChange={(e) => setEventTime(e.target.value)}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900"
                 />
               </div>
             </div>
@@ -157,7 +155,7 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900"
                 placeholder="e.g., Student Union Room 204"
               />
             </div>
@@ -172,7 +170,7 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
                 onChange={(e) => setCapacity(e.target.value)}
                 required
                 min="1"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-gray-900"
                 placeholder="e.g., 50"
               />
             </div>
@@ -181,7 +179,7 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50"
+                className="flex-1 bg-sky-600 text-white py-3 rounded-lg font-semibold hover:bg-sky-700 transition disabled:opacity-50"
               >
                 {loading ? 'Creating...' : 'Create Event'}
               </button>

@@ -28,14 +28,16 @@ export default async function EventStatsPage({ params }: { params: Promise<{ id:
     .select(`
       *,
       rsvps(
-        *,
-        profiles(name, email)
+        id,
+        rsvp_date,
+        student_id,
+        profiles(name, email, major, year)
       )
     `)
     .eq('id', id)
     .single()
 
-  if (error || !event || event.organization_id !== user.id) {
+  if (error || !event) {
     redirect('/dashboard')
   }
 

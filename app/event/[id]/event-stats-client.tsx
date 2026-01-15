@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, Calendar, MapPin, Users, Clock, Download, ArrowLeft, QrCode } from 'lucide-react'
+import { LogOut, Calendar, MapPin, Users, Clock, Download, ArrowLeft, QrCode, CheckCircle, XCircle, Trash2 } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import Logo from '@/app/components/Logo'
 
 interface Event {
   id: string
@@ -19,25 +20,124 @@ interface Event {
   rsvps: Array<{
     id: string
     rsvp_date: string
+    student_id: string
     profiles: {
       name: string
       email: string
+      major?: string | null
+      year?: string | null
     }
   }>
 }
 
+interface CheckIn {
+  student_id: string
+  check_in_time: string
+}
+
 export default function EventStatsClient({ event }: { event: Event }) {
-  const [sortField, setSortField] = useState<'name' | 'email' | 'rsvp_date'>('rsvp_date')
+  const [sortField, setSortField] = useState<'name' | 'email' | 'rsvp_date' | 'check_in'>('rsvp_date')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [checkIns, setCheckIns] = useState<CheckIn[]>([])
+  const [checkInCount, setCheckInCount] = useState(0)
+  const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  // Fetch check-ins and subscribe to real-time updates
+  useEffect(() => {
+    const fetchCheckIns = async () => {
+      const { data, error } = await supabase
+        .from('check_ins')
+        .select('student_id, check_in_time')
+        .eq('event_id', event.id)
+
+      if (!error && data) {
+        setCheckIns(data)
+        setCheckInCount(data.length)
+      }
+    }
+
+    fetchCheckIns()
+
+    // Subscribe to new check-ins
+    const channel = supabase
+      .channel(`event-check-ins-${event.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'check_ins',
+          filter: `event_id=eq.${event.id}`
+        },
+        (payload) => {
+          setCheckIns(prev => [...prev, {
+            student_id: payload.new.student_id,
+            check_in_time: payload.new.check_in_time
+          }])
+          setCheckInCount(prev => prev + 1)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [event.id, supabase])
+
+  // Create a map of check-ins for quick lookup
+  const checkInMap = useMemo(() => {
+    const map = new Map<string, string>()
+    checkIns.forEach(ci => {
+      map.set(ci.student_id, ci.check_in_time)
+    })
+    return map
+  }, [checkIns])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/login')
   }
 
-  const handleSort = (field: 'name' | 'email' | 'rsvp_date') => {
+  const handleDeleteEvent = async () => {
+    if (!confirm(`Are you sure you want to delete "${event.title}"? This action cannot be undone.`)) {
+      return
+    }
+
+    setIsDeleting(true)
+    
+    try {
+      // Delete all related RSVPs first
+      await supabase
+        .from('rsvps')
+        .delete()
+        .eq('event_id', event.id)
+
+      // Delete check-ins
+      await supabase
+        .from('check_ins')
+        .delete()
+        .eq('event_id', event.id)
+
+      // Delete the event
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', event.id)
+
+      if (error) throw error
+
+      // Redirect to dashboard after successful deletion
+      router.push('/dashboard')
+    } catch (err) {
+      console.error('Error deleting event:', err)
+      alert('Failed to delete event. Please try again.')
+      setIsDeleting(false)
+    }
+  }
+
+  const handleSort = (field: 'name' | 'email' | 'rsvp_date' | 'check_in') => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
     } else {
@@ -54,12 +154,19 @@ export default function EventStatsClient({ event }: { event: Event }) {
       return value
     }
 
-    const headers = ['Name', 'Email', 'RSVP Date']
-    const rows = sortedRsvps.map(rsvp => [
-      rsvp.profiles.name || '',
-      rsvp.profiles.email || '',
-      format(new Date(rsvp.rsvp_date), 'MMM d, yyyy h:mm a')
-    ])
+    const headers = ['Name', 'Email', 'Major', 'Year', 'RSVP Date', 'Check-In Time', 'Attended']
+    const rows = sortedRsvps.map(rsvp => {
+      const checkInTime = checkInMap.get(rsvp.student_id)
+      return [
+        rsvp.profiles.name || '',
+        rsvp.profiles.email || '',
+        rsvp.profiles.major || '',
+        rsvp.profiles.year || '',
+        format(new Date(rsvp.rsvp_date), 'MMM d, yyyy h:mm a'),
+        checkInTime ? format(new Date(checkInTime), 'MMM d, yyyy h:mm a') : '-',
+        checkInTime ? 'Yes' : 'No'
+      ]
+    })
 
     const csvContent = [
       headers.join(','),
@@ -80,6 +187,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
   // Calculate stats
   const rsvpCount = event.rsvps.length
   const fillRate = Math.round((rsvpCount / event.capacity) * 100)
+  const attendanceRate = rsvpCount > 0 ? Math.round((checkInCount / rsvpCount) * 100) : 0
   
   const { daysUntilEvent, recentRsvps } = useMemo(() => {
     const now = new Date()
@@ -92,17 +200,48 @@ export default function EventStatsClient({ event }: { event: Event }) {
     }
   }, [event.event_date, event.rsvps])
 
-  // Generate RSVP trend data (group by day)
-  const trendData = event.rsvps.reduce((acc, rsvp) => {
-    const date = format(new Date(rsvp.rsvp_date), 'MMM d')
-    const existing = acc.find(item => item.date === date)
-    if (existing) {
-      existing.rsvps += 1
-    } else {
-      acc.push({ date, rsvps: 1 })
+  // Generate RSVP trend data (cumulative count by day)
+  const trendData = useMemo(() => {
+    if (event.rsvps.length === 0) return []
+    
+    // Sort RSVPs by date
+    const sorted = [...event.rsvps].sort((a, b) => 
+      new Date(a.rsvp_date).getTime() - new Date(b.rsvp_date).getTime()
+    )
+    
+    // Get date range from event creation to event date (or today if event hasn't happened)
+    const startDate = new Date(event.created_at)
+    startDate.setHours(0, 0, 0, 0)
+    const endDate = new Date(event.event_date)
+    endDate.setHours(23, 59, 59, 999)
+    const now = new Date()
+    const chartEndDate = endDate > now ? now : endDate
+    chartEndDate.setHours(23, 59, 59, 999)
+    
+    // Generate all dates in the range
+    const dates: Date[] = []
+    const currentDate = new Date(startDate)
+    
+    while (currentDate <= chartEndDate) {
+      dates.push(new Date(currentDate))
+      currentDate.setDate(currentDate.getDate() + 1)
     }
-    return acc
-  }, [] as Array<{ date: string; rsvps: number }>)
+    
+    // Calculate cumulative RSVP count for each date
+    return dates.map(date => {
+      // Count RSVPs that occurred on or before this date
+      const cumulativeCount = sorted.filter(rsvp => {
+        const rsvpDate = new Date(rsvp.rsvp_date)
+        rsvpDate.setHours(0, 0, 0, 0)
+        return rsvpDate <= date
+      }).length
+      
+      return {
+        date: format(date, 'MMM d'),
+        rsvps: cumulativeCount
+      }
+    })
+  }, [event.rsvps, event.created_at, event.event_date])
 
   // Sort RSVPs
   const sortedRsvps = [...event.rsvps].sort((a, b) => {
@@ -114,6 +253,9 @@ export default function EventStatsClient({ event }: { event: Event }) {
     } else if (sortField === 'email') {
       aVal = a.profiles.email.toLowerCase()
       bVal = b.profiles.email.toLowerCase()
+    } else if (sortField === 'check_in') {
+      aVal = checkInMap.has(a.student_id) ? 1 : 0
+      bVal = checkInMap.has(b.student_id) ? 1 : 0
     } else {
       aVal = new Date(a.rsvp_date).getTime()
       bVal = new Date(b.rsvp_date).getTime()
@@ -133,9 +275,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-8">
-              <Link href="/dashboard" className="text-2xl font-bold text-purple-600 hover:text-purple-700">
-                RSO Events
-              </Link>
+              <Logo href="/dashboard" />
               <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
               <Link href="/create-event" className="text-gray-600 hover:text-gray-900">Create Event</Link>
             </div>
@@ -162,7 +302,17 @@ export default function EventStatsClient({ event }: { event: Event }) {
 
         {/* Event Header */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">{event.title}</h2>
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="text-3xl font-bold text-gray-900">{event.title}</h2>
+            <button
+              onClick={handleDeleteEvent}
+              disabled={isDeleting}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+            >
+              <Trash2 size={18} />
+              <span>{isDeleting ? 'Deleting...' : 'Delete Event'}</span>
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-600">
             <div className="flex items-center">
               <Calendar size={20} className="mr-3" />
@@ -194,15 +344,15 @@ export default function EventStatsClient({ event }: { event: Event }) {
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
-            <p className="text-gray-600 text-sm font-medium">Fill Rate</p>
-            <p className={`text-3xl font-bold mt-2 ${fillRate >= 80 ? 'text-green-600' : fillRate >= 50 ? 'text-yellow-600' : 'text-gray-900'}`}>
-              {fillRate}%
-            </p>
+            <p className="text-gray-600 text-sm font-medium">Checked In</p>
+            <p className="text-3xl font-bold text-green-600 mt-2">{checkInCount}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
-            <p className="text-gray-600 text-sm font-medium">Days Until Event</p>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{daysUntilEvent >= 0 ? daysUntilEvent : 0}</p>
+            <p className="text-gray-600 text-sm font-medium">Attendance Rate</p>
+            <p className={`text-3xl font-bold mt-2 ${attendanceRate >= 70 ? 'text-green-600' : attendanceRate >= 40 ? 'text-yellow-600' : 'text-gray-900'}`}>
+              {attendanceRate}%
+            </p>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
@@ -219,9 +369,15 @@ export default function EventStatsClient({ event }: { event: Event }) {
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
-                <YAxis dataKey="capacity" />
+                <YAxis domain={[0, event.capacity]} />
                 <Tooltip />
-                <Line type="monotone" dataKey="rsvps" stroke="#9333ea" strokeWidth={2} />
+                <ReferenceLine 
+                  y={event.capacity} 
+                  stroke="#ef4444" 
+                  strokeDasharray="3 3"
+                  label={{ value: 'Capacity', position: 'right', fill: '#ef4444' }}
+                />
+                <Line type="monotone" dataKey="rsvps" stroke="#0284c7" strokeWidth={2} name="RSVPs" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -235,7 +391,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-6">
             <div
-              className={`h-6 rounded-full transition-all ${fillRate >= 80 ? 'bg-green-500' : fillRate >= 50 ? 'bg-yellow-500' : 'bg-purple-600'}`}
+              className={`h-6 rounded-full transition-all ${fillRate >= 80 ? 'bg-green-500' : fillRate >= 50 ? 'bg-yellow-500' : 'bg-sky-600'}`}
               style={{ width: `${Math.min(fillRate, 100)}%` }}
             />
           </div>
@@ -256,7 +412,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
               {rsvpCount > 0 && (
                 <button
                   onClick={exportCSV}
-                  className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
+                  className="flex items-center space-x-2 bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition"
                 >
                   <Download size={18} />
                   <span>Export CSV</span>
@@ -292,22 +448,44 @@ export default function EventStatsClient({ event }: { event: Event }) {
                     >
                       RSVP Date {sortField === 'rsvp_date' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
+                    <th
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('check_in')}
+                    >
+                      Attended {sortField === 'check_in' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedRsvps.map((rsvp) => (
-                    <tr key={rsvp.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {rsvp.profiles.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {rsvp.profiles.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {format(new Date(rsvp.rsvp_date), 'MMM d, yyyy h:mm a')}
-                      </td>
-                    </tr>
-                  ))}
+                  {sortedRsvps.map((rsvp) => {
+                    const checkInTime = checkInMap.get(rsvp.student_id)
+                    return (
+                      <tr key={rsvp.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {rsvp.profiles.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {rsvp.profiles.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {format(new Date(rsvp.rsvp_date), 'MMM d, yyyy h:mm a')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {checkInTime ? (
+                            <div className="flex items-center text-green-600">
+                              <CheckCircle size={16} className="mr-2" />
+                              <span>{format(new Date(checkInTime), 'MMM d, h:mm a')}</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center text-gray-400">
+                              <XCircle size={16} className="mr-2" />
+                              <span>Not checked in</span>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

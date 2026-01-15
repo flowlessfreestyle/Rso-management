@@ -29,7 +29,6 @@ export default async function EventsPage() {
     .from('events')
     .select(`
       *,
-      profiles!events_organization_id_fkey(organization_name),
       rsvps(count)
     `)
     .order('event_date', { ascending: true })

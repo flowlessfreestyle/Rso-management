@@ -1,5 +1,5 @@
-RSO Platform - Event Management for Student Organizations
-A web platform connecting University of Washington students with Registered Student Organizations through event discovery, RSVP management, and analytics.
+SSA Platform - Event Management for Student Organizations
+A web platform connecting University of Washington students with Student Organizations through event discovery, RSVP management, and analytics.
 
 🎯 What It Does
 Students can browse events, RSVP with capacity tracking, and manage their event calendar.
