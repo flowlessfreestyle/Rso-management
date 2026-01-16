@@ -23,7 +23,7 @@ export default function Logo({
         priority
       />
       {showText && (
-        <span className="text-2xl font-bold text-sky-600 hover:text-sky-700">SSA Events</span>
+        <span className="text-xl sm:text-2xl font-bold text-sky-600 hover:text-sky-700">SSA Events</span>
       )}
     </Link>
   )

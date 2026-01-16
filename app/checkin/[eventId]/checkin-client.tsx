@@ -68,19 +68,19 @@ export default function CheckInClient({
       className="min-h-screen flex items-center justify-center p-4"
       style={{ background: 'linear-gradient(to bottom right, rgb(14 165 233), rgb(59 130 246))' }}
     >
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg">
+      <div className="bg-white rounded-lg shadow-xl p-4 sm:p-8 w-full max-w-lg">
         {/* Event Info */}
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{event.title}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{event.title}</h1>
           
-          <div className="space-y-2 text-gray-600 text-sm mt-4">
+          <div className="space-y-2 text-gray-600 text-xs sm:text-sm mt-4">
             <div className="flex items-center justify-center">
-              <Calendar size={16} className="mr-2" />
-              {format(new Date(event.event_date), 'EEEE, MMMM d, yyyy • h:mm a')}
+              <Calendar size={14} className="sm:size-16 mr-2" />
+              <span className="break-words">{format(new Date(event.event_date), 'EEEE, MMMM d, yyyy • h:mm a')}</span>
             </div>
             <div className="flex items-center justify-center">
-              <MapPin size={16} className="mr-2" />
-              {event.location}
+              <MapPin size={14} className="sm:size-16 mr-2" />
+              <span className="break-words">{event.location}</span>
             </div>
           </div>
         </div>
@@ -90,9 +90,9 @@ export default function CheckInClient({
         {/* Status Display */}
         {status === 'idle' && (
           <div className="text-center">
-            <AlertCircle className="mx-auto text-blue-500 mb-4" size={64} />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Ready to Check In?</h2>
-            <p className="text-gray-600 mb-6">
+            <AlertCircle className="mx-auto text-blue-500 mb-4 sm:size-64" size={48} />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Ready to Check In?</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-6">
               Click the button below to confirm your attendance at this event.
             </p>
             <button
@@ -114,13 +114,13 @@ export default function CheckInClient({
 
         {status === 'success' && (
           <div className="text-center">
-            <CheckCircle className="mx-auto text-green-500 mb-4" size={64} />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              {alreadyCheckedIn ? "Already Checked In!" : "Check-In Successful!"}
+            <CheckCircle className="mx-auto text-green-500 mb-4 sm:size-64" size={48} />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
+              {alreadyCheckedIn ? "Checked In!" : "Check-In Successful!"}
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-sm sm:text-base text-gray-600 mb-6">
               {alreadyCheckedIn 
-                ? "You&apos;ve already checked in to this event. Enjoy!"
+                ? "You&apos;re checked in to this event. Enjoy!"
                 : "You&apos;re all set! Enjoy the event."}
             </p>
             <button

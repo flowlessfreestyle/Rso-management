@@ -111,16 +111,16 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-4 sm:space-x-8">
               <Logo href="/dashboard" />
-              <Link href="/dashboard" className="text-gray-900 font-medium">Dashboard</Link>
+              <Link href="/dashboard" className="hidden sm:block text-gray-900 font-medium">Dashboard</Link>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center space-x-1 sm:space-x-2 text-gray-600 hover:text-gray-900"
             >
               <LogOut size={20} />
-              <span>Logout</span>
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
@@ -128,14 +128,14 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
-            <p className="text-gray-600 mt-1">Welcome back, {profile?.organization_name}!</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h2>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">Welcome back, {profile?.organization_name}!</p>
           </div>
           <button
             onClick={() => router.push('/create-event')}
-            className="flex items-center space-x-2 bg-sky-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-sky-700 transition"
+            className="flex items-center space-x-2 bg-sky-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold hover:bg-sky-700 transition w-full sm:w-auto"
           >
             <Plus size={20} />
             <span>Create Event</span>
@@ -143,7 +143,7 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -210,17 +210,17 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
                 return (
                   <div
                     key={event.id}
-                    className="p-6 hover:bg-gray-50 transition"
+                    className="p-4 sm:p-6 hover:bg-gray-50 transition"
                   >
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                       <div 
-                        className="flex-1 cursor-pointer"
+                        className="flex-1 cursor-pointer w-full"
                         onClick={() => router.push(`/event/${event.id}`)}
                       >
-                        <h4 className="text-lg font-semibold text-gray-900 mb-1">
+                        <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
                           {event.title}
                         </h4>
-                        <div className="flex items-center text-sm text-gray-600 space-x-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center text-xs sm:text-sm text-gray-600 sm:space-x-4 space-y-1 sm:space-y-0">
                           <span className="flex items-center">
                             <Calendar size={14} className="mr-1" />
                             {format(new Date(event.event_date), 'MMM d, yyyy • h:mm a')}
@@ -229,16 +229,16 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-6">
+                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-4 sm:space-x-6">
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-gray-900">{rsvpCount}</p>
-                          <p className="text-sm text-gray-600">RSVPs</p>
+                          <p className="text-xl sm:text-2xl font-bold text-gray-900">{rsvpCount}</p>
+                          <p className="text-xs sm:text-sm text-gray-600">RSVPs</p>
                         </div>
                         <div className="text-right">
-                          <p className={`text-2xl font-bold ${fillRate >= 80 ? 'text-green-600' : fillRate >= 50 ? 'text-yellow-600' : 'text-gray-900'}`}>
+                          <p className={`text-xl sm:text-2xl font-bold ${fillRate >= 80 ? 'text-green-600' : fillRate >= 50 ? 'text-yellow-600' : 'text-gray-900'}`}>
                             {fillRate}%
                           </p>
-                          <p className="text-sm text-gray-600">Fill Rate</p>
+                          <p className="text-xs sm:text-sm text-gray-600">Fill Rate</p>
                         </div>
                         <button
                           onClick={(e) => {
@@ -246,7 +246,7 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
                             handleDeleteEvent(event.id, event.title)
                           }}
                           disabled={deletingEventId === event.id}
-                          className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
                           title="Delete event"
                         >
                           <Trash2 size={18} />

@@ -73,26 +73,26 @@ export default function MyRsvpsClient({ rsvps, userId }: { rsvps: Rsvp[], userId
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-3 sm:space-x-6">
               <Logo href="/events" />
-              <Link href="/events" className="text-gray-600 hover:text-gray-900">Events</Link>
-              <Link href="/my-rsvps" className="text-gray-900 font-medium">My RSVPs</Link>
-              <Link href="/profiles/student-profile" className="text-gray-600 hover:text-gray-900">Profile</Link>
+              <Link href="/events" className="hidden sm:block text-gray-600 hover:text-gray-900">Events</Link>
+              <Link href="/my-rsvps" className="hidden md:block text-gray-900 font-medium">My RSVPs</Link>
+              <Link href="/profiles/student-profile" className="hidden md:block text-gray-600 hover:text-gray-900">Profile</Link>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center space-x-1 sm:space-x-2 text-gray-600 hover:text-gray-900"
             >
               <LogOut size={20} />
-              <span>Logout</span>
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
       </nav>
 
       {/* RSVPs List */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-8">My RSVPs</h2>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">My RSVPs</h2>
         
         {error && (
           <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -115,27 +115,27 @@ export default function MyRsvpsClient({ rsvps, userId }: { rsvps: Rsvp[], userId
             {upcomingRsvps.map((rsvp) => (
               <div
                 key={rsvp.id}
-                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+                className="bg-white rounded-lg shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow"
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                  <div className="flex-1 w-full">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
                       {rsvp.events.title}
                     </h3>
                     
                     <div className="space-y-2 mb-3">
-                      <div className="flex items-center text-gray-600 text-sm">
-                        <Calendar size={16} className="mr-2" />
-                        {format(new Date(rsvp.events.event_date), 'MMM d, yyyy • h:mm a')}
+                      <div className="flex items-center text-gray-600 text-xs sm:text-sm">
+                        <Calendar size={14} className="mr-2 flex-shrink-0" />
+                        <span className="break-words">{format(new Date(rsvp.events.event_date), 'MMM d, yyyy • h:mm a')}</span>
                       </div>
-                      <div className="flex items-center text-gray-600 text-sm">
-                        <MapPin size={16} className="mr-2" />
-                        {rsvp.events.location}
+                      <div className="flex items-center text-gray-600 text-xs sm:text-sm">
+                        <MapPin size={14} className="mr-2 flex-shrink-0" />
+                        <span className="break-words">{rsvp.events.location}</span>
                       </div>
                     </div>
 
                     {rsvp.events.description && (
-                      <p className="text-gray-600 text-sm">{rsvp.events.description}</p>
+                      <p className="text-gray-600 text-xs sm:text-sm line-clamp-2">{rsvp.events.description}</p>
                     )}
                   </div>
 
@@ -148,7 +148,7 @@ export default function MyRsvpsClient({ rsvps, userId }: { rsvps: Rsvp[], userId
 
                     if (isPast24Hours) {
                       return (
-                        <div className="ml-4 px-3 py-2 text-sm text-gray-500 bg-gray-100 rounded-lg">
+                        <div className="px-3 py-2 text-xs sm:text-sm text-gray-500 bg-gray-100 rounded-lg w-full sm:w-auto text-center sm:text-left">
                           Event Completed
                         </div>
                       )
@@ -158,7 +158,7 @@ export default function MyRsvpsClient({ rsvps, userId }: { rsvps: Rsvp[], userId
                       <button
                         onClick={() => handleCancelRsvp(rsvp.event_id, rsvp.events.event_date)}
                         disabled={loading === rsvp.event_id || isPast}
-                        className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50 self-start sm:self-auto"
                         title={isPast ? "Event has passed" : "Cancel RSVP"}
                       >
                         <Trash2 size={20} />

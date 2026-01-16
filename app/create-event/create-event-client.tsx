@@ -60,28 +60,28 @@ export default function CreateEventClient({ organizationId }: { organizationId: 
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-3 sm:space-x-6">
               <Logo href="/dashboard" />
-              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
-              <Link href="/create-event" className="text-gray-900 font-medium">Create Event</Link>
+              <Link href="/dashboard" className="hidden sm:block text-gray-600 hover:text-gray-900">Dashboard</Link>
+              <Link href="/create-event" className="hidden md:block text-gray-900 font-medium">Create Event</Link>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center space-x-1 sm:space-x-2 text-gray-600 hover:text-gray-900"
             >
               <LogOut size={20} />
-              <span>Logout</span>
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
       </nav>
 
       {/* Form */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-md p-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8">
           <div className="flex items-center mb-6">
-            <Calendar className="text-sky-600 mr-3" size={32} />
-            <h2 className="text-3xl font-bold text-gray-900">Create New Event</h2>
+            <Calendar className="text-sky-600 mr-3" size={28} />
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Create New Event</h2>
           </div>
 
           {error && (

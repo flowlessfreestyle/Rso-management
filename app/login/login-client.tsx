@@ -142,16 +142,16 @@ export default function LoginClient() {
       className="min-h-screen flex items-center justify-center p-4"
       style={{ background: 'linear-gradient(to bottom right, rgb(14 165 233), rgb(59 130 246))' }}
     >
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
+      <div className="bg-white rounded-lg shadow-xl p-4 sm:p-8 w-full max-w-md">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6 text-gray-800">
           SSA Events Platform
         </h1>
-        <h2 className="text-xl font-semibold text-center mb-6 text-gray-600">
+        <h2 className="text-lg sm:text-xl font-semibold text-center mb-4 sm:mb-6 text-gray-600">
           {isSignUp ? 'Create Account' : 'Sign In'}
         </h2>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
             {error}
           </div>
         )}

@@ -274,17 +274,17 @@ export default function EventStatsClient({ event }: { event: Event }) {
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-3 sm:space-x-6">
               <Logo href="/dashboard" />
-              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">Dashboard</Link>
-              <Link href="/create-event" className="text-gray-600 hover:text-gray-900">Create Event</Link>
+              <Link href="/dashboard" className="hidden sm:block text-gray-600 hover:text-gray-900">Dashboard</Link>
+              <Link href="/create-event" className="hidden md:block text-gray-600 hover:text-gray-900">Create Event</Link>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center space-x-1 sm:space-x-2 text-gray-600 hover:text-gray-900"
             >
               <LogOut size={20} />
-              <span>Logout</span>
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
@@ -301,19 +301,19 @@ export default function EventStatsClient({ event }: { event: Event }) {
         </button>
 
         {/* Event Header */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-3xl font-bold text-gray-900">{event.title}</h2>
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">{event.title}</h2>
             <button
               onClick={handleDeleteEvent}
               disabled={isDeleting}
-              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 text-sm sm:text-base w-full sm:w-auto"
             >
               <Trash2 size={18} />
               <span>{isDeleting ? 'Deleting...' : 'Delete Event'}</span>
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-600">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm sm:text-base text-gray-600">
             <div className="flex items-center">
               <Calendar size={20} className="mr-3" />
               {format(new Date(event.event_date), 'EEEE, MMMM d, yyyy • h:mm a')}
@@ -337,7 +337,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mb-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <p className="text-gray-600 text-sm font-medium">Total RSVPs</p>
             <p className="text-3xl font-bold text-gray-900 mt-2">{rsvpCount}</p>
@@ -399,12 +399,12 @@ export default function EventStatsClient({ event }: { event: Event }) {
 
         {/* Attendee List */}
         <div className="bg-white rounded-lg shadow-md">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="text-xl font-bold text-gray-900">Attendee List ({rsvpCount})</h3>
-            <div className="flex space-x-3">
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">Attendee List ({rsvpCount})</h3>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
               <button
                 onClick={() => router.push(`/event/${event.id}/qr-checkin`)}
-                className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                className="flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm sm:text-base"
               >
                 <QrCode size={18} />
                 <span>QR Check-In</span>
@@ -412,7 +412,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
               {rsvpCount > 0 && (
                 <button
                   onClick={exportCSV}
-                  className="flex items-center space-x-2 bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition"
+                  className="flex items-center justify-center space-x-2 bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition text-sm sm:text-base"
                 >
                   <Download size={18} />
                   <span>Export CSV</span>
@@ -426,30 +426,30 @@ export default function EventStatsClient({ event }: { event: Event }) {
               No RSVPs yet. Share your event to get attendees!
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full min-w-[640px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('name')}
                     >
                       Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
                     <th
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('email')}
                     >
                       Email {sortField === 'email' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
                     <th
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 hidden sm:table-cell"
                       onClick={() => handleSort('rsvp_date')}
                     >
                       RSVP Date {sortField === 'rsvp_date' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
                     <th
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('check_in')}
                     >
                       Attended {sortField === 'check_in' && (sortDirection === 'asc' ? '↑' : '↓')}
@@ -461,25 +461,27 @@ export default function EventStatsClient({ event }: { event: Event }) {
                     const checkInTime = checkInMap.get(rsvp.student_id)
                     return (
                       <tr key={rsvp.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
                           {rsvp.profiles.name}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {rsvp.profiles.email}
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600">
+                          <span className="break-all">{rsvp.profiles.email}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
                           {format(new Date(rsvp.rsvp_date), 'MMM d, yyyy h:mm a')}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm">
                           {checkInTime ? (
                             <div className="flex items-center text-green-600">
-                              <CheckCircle size={16} className="mr-2" />
-                              <span>{format(new Date(checkInTime), 'MMM d, h:mm a')}</span>
+                              <CheckCircle size={14} className="sm:size-16 mr-2" />
+                              <span className="hidden sm:inline">{format(new Date(checkInTime), 'MMM d, h:mm a')}</span>
+                              <span className="sm:hidden">{format(new Date(checkInTime), 'h:mm a')}</span>
                             </div>
                           ) : (
                             <div className="flex items-center text-gray-400">
-                              <XCircle size={16} className="mr-2" />
-                              <span>Not checked in</span>
+                              <XCircle size={14} className="sm:size-16 mr-2" />
+                              <span className="hidden sm:inline">Not checked in</span>
+                              <span className="sm:hidden">No</span>
                             </div>
                           )}
                         </td>

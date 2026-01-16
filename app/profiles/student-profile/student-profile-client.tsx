@@ -61,28 +61,28 @@ export default function StudentProfileClient({ profile }: { profile: Profile }) 
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-3 sm:space-x-6">
               <Logo href="/events" />
-              <Link href="/events" className="text-gray-600 hover:text-gray-900">Events</Link>
-              <Link href="/my-rsvps" className="text-gray-600 hover:text-gray-900">My RSVPs</Link>
-              <Link href="/profiles/student-profile" className="text-gray-900 font-medium">Profile</Link>
+              <Link href="/events" className="hidden sm:block text-gray-600 hover:text-gray-900">Events</Link>
+              <Link href="/my-rsvps" className="hidden md:block text-gray-600 hover:text-gray-900">My RSVPs</Link>
+              <Link href="/profiles/student-profile" className="hidden md:block text-gray-900 font-medium">Profile</Link>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center space-x-1 sm:space-x-2 text-gray-600 hover:text-gray-900"
             >
               <LogOut size={20} />
-              <span>Logout</span>
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
       </nav>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-md p-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-8">
           <div className="flex items-center mb-6">
-            <User size={32} className="text-sky-600 mr-3" />
-            <h2 className="text-3xl font-bold text-gray-900">My Profile</h2>
+            <User size={28} className="sm:size-32 text-sky-600 mr-3" />
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">My Profile</h2>
           </div>
 
           {message && (
