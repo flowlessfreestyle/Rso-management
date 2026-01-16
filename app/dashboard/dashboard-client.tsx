@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, Plus, Calendar, Users, TrendingUp, BarChart3, Trash2 } from 'lucide-react'
+import { LogOut, Plus, Calendar, Users, TrendingUp, BarChart3, Trash2, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import Logo from '@/app/components/Logo'
 
@@ -15,6 +15,7 @@ interface Event {
   location: string
   capacity: number
   rsvps: { count: number }[]
+  checkInCount?: number
 }
 
 interface Profile {
@@ -42,8 +43,23 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
         `)
         .order('event_date', { ascending: true })
 
-      if (!cancelled) {
-        setEvents(data || [])
+      if (!cancelled && data) {
+        // Fetch check-in counts for each event
+        const eventsWithCheckIns = await Promise.all(
+          data.map(async (event) => {
+            const { count } = await supabase
+              .from('check_ins')
+              .select('*', { count: 'exact', head: true })
+              .eq('event_id', event.id)
+            
+            return {
+              ...event,
+              checkInCount: count || 0
+            }
+          })
+        )
+        
+        setEvents(eventsWithCheckIns)
         setLoading(false)
       }
     }
@@ -98,11 +114,13 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
     }
   }
 
-  // Calculate stats
+  // Calculate stats - use check-in count if higher than RSVP count
   const totalEvents = events.length
   const totalRsvps = events.reduce((sum, event) => sum + (event.rsvps[0]?.count || 0), 0)
+  const totalCheckIns = events.reduce((sum, event) => sum + (event.checkInCount || 0), 0)
+  const totalAttendance = Math.max(totalRsvps, totalCheckIns) // Use check-ins if higher
   const avgFillRate = totalEvents > 0
-    ? Math.round((totalRsvps / events.reduce((sum, e) => sum + e.capacity, 0)) * 100)
+    ? Math.round((totalAttendance / events.reduce((sum, e) => sum + e.capacity, 0)) * 100)
     : 0
 
   return (
@@ -159,11 +177,11 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Total RSVPs</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{totalRsvps}</p>
+                <p className="text-gray-600 text-sm font-medium">Total Check-Ins</p>
+                <p className="text-3xl font-bold text-green-600 mt-2">{totalCheckIns}</p>
               </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Users className="text-blue-600" size={24} />
+              <div className="bg-green-100 p-3 rounded-lg">
+                <CheckCircle className="text-green-600" size={24} />
               </div>
             </div>
           </div>
@@ -205,7 +223,9 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
             <div className="divide-y divide-gray-200">
               {events.map((event) => {
                 const rsvpCount = event.rsvps[0]?.count || 0
-                const fillRate = Math.round((rsvpCount / event.capacity) * 100)
+                const checkInCount = event.checkInCount || 0
+                const actualAttendance = Math.max(rsvpCount, checkInCount) // Use check-ins if higher
+                const fillRate = Math.round((actualAttendance / event.capacity) * 100)
 
                 return (
                   <div
@@ -229,10 +249,14 @@ export default function DashboardClient({ profile }: { profile: Profile }) {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-4 sm:space-x-6">
+                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-3 sm:space-x-4">
                         <div className="text-right">
                           <p className="text-xl sm:text-2xl font-bold text-gray-900">{rsvpCount}</p>
                           <p className="text-xs sm:text-sm text-gray-600">RSVPs</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl sm:text-2xl font-bold text-green-600">{checkInCount}</p>
+                          <p className="text-xs sm:text-sm text-gray-600">Checked In</p>
                         </div>
                         <div className="text-right">
                           <p className={`text-xl sm:text-2xl font-bold ${fillRate >= 80 ? 'text-green-600' : fillRate >= 50 ? 'text-yellow-600' : 'text-gray-900'}`}>

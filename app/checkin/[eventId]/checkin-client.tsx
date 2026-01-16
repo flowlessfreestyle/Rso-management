@@ -120,8 +120,8 @@ export default function CheckInClient({
             </h2>
             <p className="text-sm sm:text-base text-gray-600 mb-6">
               {alreadyCheckedIn 
-                ? "You&apos;re checked in to this event. Enjoy!"
-                : "You&apos;re all set! Enjoy the event."}
+                ? "You're checked in to this event. Enjoy!"
+                : "You're all set! Enjoy the event."}
             </p>
             <button
               onClick={() => router.push('/events')}

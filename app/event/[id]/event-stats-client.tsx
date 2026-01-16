@@ -40,6 +40,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [checkIns, setCheckIns] = useState<CheckIn[]>([])
   const [checkInCount, setCheckInCount] = useState(0)
+  const [checkInProfiles, setCheckInProfiles] = useState<Map<string, { name: string; email: string; major?: string | null; year?: string | null }>>(new Map())
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -55,6 +56,28 @@ export default function EventStatsClient({ event }: { event: Event }) {
       if (!error && data) {
         setCheckIns(data)
         setCheckInCount(data.length)
+        
+        // Fetch profiles for all checked-in students
+        const studentIds = data.map(ci => ci.student_id)
+        if (studentIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, name, email, major, year')
+            .in('id', studentIds)
+          
+          if (profiles) {
+            const profileMap = new Map()
+            profiles.forEach(profile => {
+              profileMap.set(profile.id, {
+                name: profile.name || '',
+                email: profile.email || '',
+                major: profile.major || null,
+                year: profile.year || null
+              })
+            })
+            setCheckInProfiles(profileMap)
+          }
+        }
       }
     }
 
@@ -71,12 +94,32 @@ export default function EventStatsClient({ event }: { event: Event }) {
           table: 'check_ins',
           filter: `event_id=eq.${event.id}`
         },
-        (payload) => {
+        async (payload) => {
           setCheckIns(prev => [...prev, {
             student_id: payload.new.student_id,
             check_in_time: payload.new.check_in_time
           }])
           setCheckInCount(prev => prev + 1)
+          
+          // Fetch profile for new check-in
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, name, email, major, year')
+            .eq('id', payload.new.student_id)
+            .single()
+          
+          if (profile) {
+            setCheckInProfiles(prev => {
+              const newMap = new Map(prev)
+              newMap.set(profile.id, {
+                name: profile.name || '',
+                email: profile.email || '',
+                major: profile.major || null,
+                year: profile.year || null
+              })
+              return newMap
+            })
+          }
         }
       )
       .subscribe()
@@ -146,7 +189,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
     }
   }
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
     const escapeCSV = (value: string) => {
       if (value.includes(',') || value.includes('"') || value.includes('\n')) {
         return `"${value.replace(/"/g, '""')}"`
@@ -154,18 +197,68 @@ export default function EventStatsClient({ event }: { event: Event }) {
       return value
     }
 
+    // Get all checked-in student IDs
+    const checkedInStudentIds = new Set(checkIns.map(ci => ci.student_id))
+    
+    // Get RSVP map for quick lookup
+    const rsvpMap = new Map<string, { rsvp_date: string; profiles: { name: string; email: string; major?: string | null; year?: string | null } }>()
+    event.rsvps.forEach(rsvp => {
+      rsvpMap.set(rsvp.student_id, rsvp)
+    })
+
     const headers = ['Name', 'Email', 'Major', 'Year', 'RSVP Date', 'Check-In Time', 'Attended']
-    const rows = sortedRsvps.map(rsvp => {
-      const checkInTime = checkInMap.get(rsvp.student_id)
-      return [
-        rsvp.profiles.name || '',
-        rsvp.profiles.email || '',
-        rsvp.profiles.major || '',
-        rsvp.profiles.year || '',
-        format(new Date(rsvp.rsvp_date), 'MMM d, yyyy h:mm a'),
-        checkInTime ? format(new Date(checkInTime), 'MMM d, yyyy h:mm a') : '-',
-        checkInTime ? 'Yes' : 'No'
-      ]
+    const rows: string[][] = []
+
+    // Add all checked-in students (including those without RSVPs)
+    for (const checkIn of checkIns) {
+      const checkInTime = checkIn.check_in_time
+      const profile = checkInProfiles.get(checkIn.student_id)
+      const rsvp = rsvpMap.get(checkIn.student_id)
+      
+      if (profile) {
+        rows.push([
+          profile.name || '',
+          profile.email || '',
+          profile.major || '',
+          profile.year || '',
+          rsvp ? format(new Date(rsvp.rsvp_date), 'MMM d, yyyy h:mm a') : '-',
+          format(new Date(checkInTime), 'MMM d, yyyy h:mm a'),
+          'Yes'
+        ])
+      }
+    }
+
+    // Add RSVPs that haven't checked in yet
+    event.rsvps.forEach(rsvp => {
+      if (!checkedInStudentIds.has(rsvp.student_id)) {
+        rows.push([
+          rsvp.profiles.name || '',
+          rsvp.profiles.email || '',
+          rsvp.profiles.major || '',
+          rsvp.profiles.year || '',
+          format(new Date(rsvp.rsvp_date), 'MMM d, yyyy h:mm a'),
+          '-',
+          'No'
+        ])
+      }
+    })
+
+    // Sort rows by check-in time (checked-in first, then by RSVP date)
+    rows.sort((a, b) => {
+      const aCheckedIn = a[6] === 'Yes'
+      const bCheckedIn = b[6] === 'Yes'
+      if (aCheckedIn && !bCheckedIn) return -1
+      if (!aCheckedIn && bCheckedIn) return 1
+      if (aCheckedIn && bCheckedIn) {
+        // Both checked in, sort by check-in time
+        const aTime = a[5] !== '-' ? new Date(a[5]).getTime() : 0
+        const bTime = b[5] !== '-' ? new Date(b[5]).getTime() : 0
+        return bTime - aTime
+      }
+      // Neither checked in, sort by RSVP date
+      const aRsvp = a[4] !== '-' ? new Date(a[4]).getTime() : 0
+      const bRsvp = b[4] !== '-' ? new Date(b[4]).getTime() : 0
+      return bRsvp - aRsvp
     })
 
     const csvContent = [
@@ -184,10 +277,14 @@ export default function EventStatsClient({ event }: { event: Event }) {
     window.URL.revokeObjectURL(url)
   }
 
-  // Calculate stats
+  // Calculate stats - use check-in count for capacity if higher than RSVP count
   const rsvpCount = event.rsvps.length
-  const fillRate = Math.round((rsvpCount / event.capacity) * 100)
-  const attendanceRate = rsvpCount > 0 ? Math.round((checkInCount / rsvpCount) * 100) : 0
+  const actualAttendance = Math.max(rsvpCount, checkInCount) // Use check-ins if higher
+  const fillRate = Math.round((actualAttendance / event.capacity) * 100)
+  
+  // Calculate attendance rate: RSVP'd students who checked in / total RSVPs
+  const rsvpStudentsWhoCheckedIn = event.rsvps.filter(rsvp => checkInMap.has(rsvp.student_id)).length
+  const attendanceRate = rsvpCount > 0 ? Math.round((rsvpStudentsWhoCheckedIn / rsvpCount) * 100) : 0
   
   const { daysUntilEvent, recentRsvps } = useMemo(() => {
     const now = new Date()
@@ -243,22 +340,82 @@ export default function EventStatsClient({ event }: { event: Event }) {
     })
   }, [event.rsvps, event.created_at, event.event_date])
 
-  // Sort RSVPs
-  const sortedRsvps = [...event.rsvps].sort((a, b) => {
+  // Create combined attendees list (RSVPs + check-ins without RSVPs)
+  const attendeesList = useMemo(() => {
+    const rsvpMap = new Map<string, typeof event.rsvps[0]>()
+    event.rsvps.forEach(rsvp => {
+      rsvpMap.set(rsvp.student_id, rsvp)
+    })
+
+    const attendees: Array<{
+      student_id: string
+      name: string
+      email: string
+      major?: string | null
+      year?: string | null
+      rsvp_date?: string
+      rsvp_id?: string
+      check_in_time?: string
+      hasRsvp: boolean
+      hasCheckIn: boolean
+    }> = []
+
+    // Add all RSVPs
+    event.rsvps.forEach(rsvp => {
+      const checkInTime = checkInMap.get(rsvp.student_id)
+      attendees.push({
+        student_id: rsvp.student_id,
+        name: rsvp.profiles.name || '',
+        email: rsvp.profiles.email || '',
+        major: rsvp.profiles.major || null,
+        year: rsvp.profiles.year || null,
+        rsvp_date: rsvp.rsvp_date,
+        rsvp_id: rsvp.id,
+        check_in_time: checkInTime,
+        hasRsvp: true,
+        hasCheckIn: !!checkInTime
+      })
+    })
+
+    // Add check-ins that don't have RSVPs
+    checkIns.forEach(checkIn => {
+      if (!rsvpMap.has(checkIn.student_id)) {
+        const profile = checkInProfiles.get(checkIn.student_id)
+        if (profile) {
+          attendees.push({
+            student_id: checkIn.student_id,
+            name: profile.name || '',
+            email: profile.email || '',
+            major: profile.major || null,
+            year: profile.year || null,
+            check_in_time: checkIn.check_in_time,
+            hasRsvp: false,
+            hasCheckIn: true
+          })
+        }
+      }
+    })
+
+    return attendees
+  }, [event.rsvps, checkIns, checkInMap, checkInProfiles])
+
+  // Sort attendees
+  const sortedAttendees = [...attendeesList].sort((a, b) => {
     let aVal, bVal
     
     if (sortField === 'name') {
-      aVal = a.profiles.name.toLowerCase()
-      bVal = b.profiles.name.toLowerCase()
+      aVal = a.name.toLowerCase()
+      bVal = b.name.toLowerCase()
     } else if (sortField === 'email') {
-      aVal = a.profiles.email.toLowerCase()
-      bVal = b.profiles.email.toLowerCase()
+      aVal = a.email.toLowerCase()
+      bVal = b.email.toLowerCase()
     } else if (sortField === 'check_in') {
-      aVal = checkInMap.has(a.student_id) ? 1 : 0
-      bVal = checkInMap.has(b.student_id) ? 1 : 0
+      aVal = a.hasCheckIn ? 1 : 0
+      bVal = b.hasCheckIn ? 1 : 0
     } else {
-      aVal = new Date(a.rsvp_date).getTime()
-      bVal = new Date(b.rsvp_date).getTime()
+      // RSVP date - use check-in time if no RSVP date
+      aVal = a.rsvp_date ? new Date(a.rsvp_date).getTime() : (a.check_in_time ? new Date(a.check_in_time).getTime() : 0)
+      bVal = b.rsvp_date ? new Date(b.rsvp_date).getTime() : (b.check_in_time ? new Date(b.check_in_time).getTime() : 0)
     }
 
     if (sortDirection === 'asc') {
@@ -387,7 +544,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-xl font-bold text-gray-900">Capacity</h3>
-            <span className="text-lg font-semibold text-gray-700">{rsvpCount} / {event.capacity}</span>
+            <span className="text-lg font-semibold text-gray-700">{actualAttendance} / {event.capacity}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-6">
             <div
@@ -400,7 +557,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
         {/* Attendee List */}
         <div className="bg-white rounded-lg shadow-md">
           <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900">Attendee List ({rsvpCount})</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">Attendee List ({actualAttendance})</h3>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
               <button
                 onClick={() => router.push(`/event/${event.id}/qr-checkin`)}
@@ -409,21 +566,19 @@ export default function EventStatsClient({ event }: { event: Event }) {
                 <QrCode size={18} />
                 <span>QR Check-In</span>
               </button>
-              {rsvpCount > 0 && (
-                <button
-                  onClick={exportCSV}
-                  className="flex items-center justify-center space-x-2 bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition text-sm sm:text-base"
-                >
-                  <Download size={18} />
-                  <span>Export CSV</span>
-                </button>
-              )}
+              <button
+                onClick={exportCSV}
+                className="flex items-center justify-center space-x-2 bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition text-sm sm:text-base"
+              >
+                <Download size={18} />
+                <span>Export CSV</span>
+              </button>
             </div>
           </div>
 
-          {rsvpCount === 0 ? (
+          {actualAttendance === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              No RSVPs yet. Share your event to get attendees!
+              No attendees yet. Share your event to get attendees!
             </div>
           ) : (
             <div className="overflow-x-auto -mx-4 sm:mx-0">
@@ -454,35 +609,48 @@ export default function EventStatsClient({ event }: { event: Event }) {
                     >
                       Attended {sortField === 'check_in' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedRsvps.map((rsvp) => {
-                    const checkInTime = checkInMap.get(rsvp.student_id)
+                  {sortedAttendees.map((attendee) => {
                     return (
-                      <tr key={rsvp.id} className="hover:bg-gray-50">
+                      <tr key={attendee.rsvp_id || attendee.student_id} className="hover:bg-gray-50">
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
-                          {rsvp.profiles.name}
+                          {attendee.name}
                         </td>
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600">
-                          <span className="break-all">{rsvp.profiles.email}</span>
+                          <span className="break-all">{attendee.email}</span>
                         </td>
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden sm:table-cell">
-                          {format(new Date(rsvp.rsvp_date), 'MMM d, yyyy h:mm a')}
+                          {attendee.rsvp_date ? format(new Date(attendee.rsvp_date), 'MMM d, yyyy h:mm a') : '-'}
                         </td>
                         <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm">
-                          {checkInTime ? (
+                          {attendee.hasCheckIn && attendee.check_in_time ? (
                             <div className="flex items-center text-green-600">
-                              <CheckCircle size={14} className="sm:size-16 mr-2" />
-                              <span className="hidden sm:inline">{format(new Date(checkInTime), 'MMM d, h:mm a')}</span>
-                              <span className="sm:hidden">{format(new Date(checkInTime), 'h:mm a')}</span>
+                              <CheckCircle size={20} className="mr-2" />
+                              <span className="hidden sm:inline">{format(new Date(attendee.check_in_time), 'MMM d, h:mm a')}</span>
+                              <span className="sm:hidden">{format(new Date(attendee.check_in_time), 'h:mm a')}</span>
                             </div>
                           ) : (
                             <div className="flex items-center text-gray-400">
-                              <XCircle size={14} className="sm:size-16 mr-2" />
+                              <XCircle size={9} className="mr-2" />
                               <span className="hidden sm:inline">Not checked in</span>
                               <span className="sm:hidden">No</span>
                             </div>
+                          )}
+                        </td>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm">
+                          {attendee.hasRsvp ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              RSVP
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                              Walk-in
+                            </span>
                           )}
                         </td>
                       </tr>
