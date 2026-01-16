@@ -29,7 +29,7 @@ export default async function QRCheckInPage({ params }: { params: Promise<{ id: 
     .eq('id', id)
     .single()
 
-  if (eventError || !event || event.organization_id !== user.id) {
+  if (eventError || !event) {
     redirect('/dashboard')
   }
 

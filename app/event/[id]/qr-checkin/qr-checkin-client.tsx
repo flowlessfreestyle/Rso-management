@@ -243,7 +243,7 @@ export default function QRCheckInClient({
               <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
                 <li>Display this QR code at your event entrance</li>
                 <li>Students scan the code with their phone</li>
-                <li>They&apos;ll be checked in automatically if RSVP&apos;d</li>
+                <li>They&apos;ll be checked in automatically</li>
                 <li>Watch this page for real-time check-ins</li>
               </ol>
             </div>
