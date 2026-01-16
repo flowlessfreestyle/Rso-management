@@ -397,7 +397,7 @@ export default function EventStatsClient({ event }: { event: Event }) {
     })
 
     return attendees
-  }, [event.rsvps, checkIns, checkInMap, checkInProfiles])
+  }, [event, checkIns, checkInMap, checkInProfiles])
 
   // Sort attendees
   const sortedAttendees = [...attendeesList].sort((a, b) => {
