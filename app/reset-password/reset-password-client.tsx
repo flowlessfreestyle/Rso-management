@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function ResetPasswordClient() {
   const [password, setPassword] = useState('')
@@ -11,22 +11,26 @@ export default function ResetPasswordClient() {
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabaseRef = useRef(createClient())
 
   useEffect(() => {
-    const hash = window.location.hash
-    if (hash && hash.includes('access_token')) {
-      queueMicrotask(() => setReady(true))
-    } else {
-      // fallback: listen for the event
-      const { data: listener } = supabaseRef.current.auth.onAuthStateChange((event) => {
-        if (event === 'PASSWORD_RECOVERY') {
+    const code = searchParams?.get('code')
+
+    if (code) {
+      supabaseRef.current.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          setError('Reset link is invalid or has expired. Please request a new one.')
+        } else {
           setReady(true)
         }
       })
-      return () => listener.subscription.unsubscribe()
+    } else {
+      queueMicrotask(() =>
+        setError('No reset code found. Please request a new password reset link.')
+      )
     }
-  }, [])
+  }, [searchParams])
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,7 +46,7 @@ export default function ResetPasswordClient() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/login?reset=success')
+      router.push('/login')
     }
   }
 
@@ -59,68 +63,59 @@ export default function ResetPasswordClient() {
           Set New Password
         </h2>
 
-        {!ready ? (
-          <>
-            <p className="text-center text-gray-500 text-sm">Verifying your reset link…</p>
-            <p className="text-center mt-4 text-gray-600">
-              <button
-                type="button"
-                onClick={() => router.push('/login')}
-                className="text-sky-600 font-semibold hover:underline"
-              >
-                Back to Sign In
-              </button>
-            </p>
-          </>
-        ) : (
-          <>
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
-                {error}
-              </div>
-            )}
-            <form onSubmit={handleReset} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-                <input
-                  type="password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  required
-                  minLength={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-sky-600 text-white py-2 rounded-lg font-semibold hover:bg-sky-700 transition disabled:opacity-50"
-              >
-                {loading ? 'Updating...' : 'Update Password'}
-              </button>
-            </form>
-            <p className="text-center mt-4 text-gray-600">
-              <button
-                type="button"
-                onClick={() => router.push('/login')}
-                className="text-sky-600 font-semibold hover:underline"
-              >
-                Back to Sign In
-              </button>
-            </p>
-          </>
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+            {error}
+          </div>
         )}
+
+        {!ready && !error && (
+          <p className="text-center text-gray-500 text-sm">Verifying your reset link…</p>
+        )}
+
+        {ready && (
+          <form onSubmit={handleReset} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+              <input
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+                minLength={6}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-black"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-sky-600 text-white py-2 rounded-lg font-semibold hover:bg-sky-700 transition disabled:opacity-50"
+            >
+              {loading ? 'Updating...' : 'Update Password'}
+            </button>
+          </form>
+        )}
+
+        <p className="text-center mt-4 text-gray-600">
+          <button
+            type="button"
+            onClick={() => router.push('/login')}
+            className="text-sky-600 font-semibold hover:underline"
+          >
+            Back to Sign In
+          </button>
+        </p>
       </div>
     </div>
   )
