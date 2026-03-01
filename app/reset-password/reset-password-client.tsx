@@ -12,22 +12,20 @@ export default function ResetPasswordClient() {
   const [ready, setReady] = useState(false)
   const router = useRouter()
   const supabaseRef = useRef(createClient())
-  const supabase = supabaseRef.current
 
   useEffect(() => {
-    const client = supabaseRef.current
-    const setReadyIfRecovered = () => setReady(true)
-
-    const { data: listener } = client.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReadyIfRecovered()
-    })
-
-    client.auth.getSession().then(({ data: { session } }) => {
-      const isRecovery = typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
-      if (session && isRecovery) setReadyIfRecovered()
-    })
-
-    return () => listener.subscription.unsubscribe()
+    const hash = window.location.hash
+    if (hash && hash.includes('access_token')) {
+      queueMicrotask(() => setReady(true))
+    } else {
+      // fallback: listen for the event
+      const { data: listener } = supabaseRef.current.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setReady(true)
+        }
+      })
+      return () => listener.subscription.unsubscribe()
+    }
   }, [])
 
   const handleReset = async (e: React.FormEvent) => {
@@ -39,7 +37,7 @@ export default function ResetPasswordClient() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.updateUser({ password })
+    const { error } = await supabaseRef.current.auth.updateUser({ password })
     if (error) {
       setError(error.message)
       setLoading(false)
